@@ -1,15 +1,15 @@
 pipeline {
 
   environment {
-    PROJECT = "gke-cluster-demo"
-    CLUSTER = "jenkins-cd"
-    CLUSTER_ZONE = "us-east1-d"
+    PROJECT = "gke-cluster-demo-1"
+    CLUSTER = "demo-prod"
+    CLUSTER_ZONE = "northamerica-northeast1"
     JENKINS_CRED = "gke-cluster-demo"
   }
 
   def namespace = "default"
   def chartName = "demo-rest-service"
-  def version = ""
+  def version = "1.0.5+c00f7f5"
   def chart = chartName + version + ".tgz"
 
   environment {
@@ -22,17 +22,19 @@ pipeline {
   }
   stages {
 
-    stage('Deploy Production') {
+    stage('Deploy Development') {
 
       steps{
 
         sh """
         wget https://axamit.jfrog.io/artifactory/helm-stable/${chart}
         tar -zxvf ${chart}
+        ls
         """
 
+        /*
         container('helm') {
-
+            "sh helm template --debug . --output-dir k8s"
         }
 
         container('kubectl') {
@@ -41,10 +43,11 @@ pipeline {
                 projectId: env.PROJECT,
                 clusterName: env.CLUSTER,
                 zone: env.CLUSTER_ZONE,
-                manifestPattern: 'k8s/services',
+                manifestPattern: 'k8s/demo-rest-service/templates/overlays/environments/dev',
                 credentialsId: env.JENKINS_CRED,
                 verifyDeployments: false])
         }
+        */
       }
 
     }
