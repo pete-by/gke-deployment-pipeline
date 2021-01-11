@@ -10,11 +10,9 @@ pipeline {
     CLUSTER = "demo-prod"
     CLUSTER_ZONE = "northamerica-northeast1"
     JENKINS_CRED = "gke-cluster-demo"
-  }
-
-  environment {
     DOCKER_REGISTRY_SECRET = 'docker-hub-secret'
   }
+
   agent {
       kubernetes {
           yamlFile 'KubernetesPod.yaml'
