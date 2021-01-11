@@ -48,21 +48,23 @@ pipeline {
 
            container('kustomize') {
              sh """
-             ls -LR k8s
              cd ./k8s/demo-rest-service/templates/overlays/envronments/dev
              kustomize build . > deployment.yaml
              """
-             /*
-             step([$class: 'KubernetesEngineBuilder',
-                    namespace: namespace,
-                    projectId: env.PROJECT,
-                    clusterName: env.CLUSTER,
-                    zone: env.CLUSTER_ZONE,
-                    manifestPattern: 'k8s/demo-rest-service/templates/overlays/envronments/dev/deployment.yaml',
-                    credentialsId: env.JENKINS_CRED,
-                    verifyDeployments: false])
-               */
-            }
+           }
+
+           container('kubectl') {
+
+                 step([$class: 'KubernetesEngineBuilder',
+                        namespace: namespace,
+                        projectId: env.PROJECT,
+                        clusterName: env.CLUSTER,
+                        zone: env.CLUSTER_ZONE,
+                        manifestPattern: 'k8s/demo-rest-service/templates/overlays/envronments/dev/deployment.yaml',
+                        credentialsId: env.JENKINS_CRED,
+                        verifyDeployments: false])
+
+           }
 
         }
     }
