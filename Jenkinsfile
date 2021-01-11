@@ -46,13 +46,13 @@ pipeline {
        steps {
            echo "Deploying..."
 
-           container('kubectl') {
+           container('kustomize') {
              sh """
              ls -LR k8s
              cd ./k8s/demo-rest-service/templates/overlays/envronments/dev
-             kubectl kustomize . > deployment.yaml
+             kustomize build . > deployment.yaml
              """
-
+             /*
              step([$class: 'KubernetesEngineBuilder',
                     namespace: namespace,
                     projectId: env.PROJECT,
@@ -61,6 +61,7 @@ pipeline {
                     manifestPattern: 'k8s/demo-rest-service/templates/overlays/envronments/dev/deployment.yaml',
                     credentialsId: env.JENKINS_CRED,
                     verifyDeployments: false])
+               */
             }
 
         }

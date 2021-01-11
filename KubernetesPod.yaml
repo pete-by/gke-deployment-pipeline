@@ -24,12 +24,19 @@ spec:
         runAsGroup: 1000
       tty: true
       command: ["cat"]
-    - name: kubectl
-      image: bitnami/kubectl:1.20
+    - name: kustomize
+      image: peteby/kustomize:v3.9.1
       securityContext:
         runAsUser: 1000
         runAsGroup: 1000
       tty: true
       command: [ "cat" ]
+#    - name: kubectl
+#      image: bitnami/kubectl:1.20
+#      securityContext:
+#        runAsUser: 1000
+#        runAsGroup: 1000
+#      tty: true
+#      command: [ "cat" ]
   imagePullSecrets:
     - name: regcred
