@@ -1,7 +1,7 @@
 def namespace = "default"
 def chartName = "demo-rest-service"
 def version = "1.0.5+c00f7f5"
-def chart = chartName + version + ".tgz"
+def chart = chartName + "-" + version + ".tgz"
 
 pipeline {
 
