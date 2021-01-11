@@ -19,26 +19,32 @@ pipeline {
       }
   }
   stages {
-
-    stage('Deploy Development') {
-
+    stage('Download Artifact') {
       steps{
 
         withCredentials([usernamePassword(credentialsId: 'artifactory-secret', usernameVariable: 'HELM_STABLE_USERNAME', passwordVariable: 'HELM_STABLE_PASSWORD')]) {
-
             sh """
-            wget --auth-no-challenge  --http-user=${HELM_STABLE_USERNAME} --http-password=${HELM_STABLE_PASSWORD} https://axamit.jfrog.io/artifactory/helm-stable/${chart}
+            wget --auth-no-challenge  --http-user=\${HELM_STABLE_USERNAME} --http-password=\${HELM_STABLE_PASSWORD} https://axamit.jfrog.io/artifactory/helm-stable/${chart}
             tar -zxvf ${chart}
             ls
             """
-
         }
+      }
+    }
+    stage('Prepare Deployment') {
+      steps{
+        container('helm') {
+            sh """
+             cd ${chartName}
+             helm template --debug . --output-dir k8s
+             ls
+             """
+        }
+      }
+    }
+    stage('Deploy Development') {
 
         /*
-        container('helm') {
-            "sh helm template --debug . --output-dir k8s"
-        }
-
         container('kubectl') {
           step([$class: 'KubernetesEngineBuilder',
                 namespace: namespace,
