@@ -7,7 +7,7 @@ pipeline {
 
   environment {
     PROJECT = "gke-cluster-demo-1"
-    CLUSTER = "demo-prod"
+    CLUSTER = "prod-cluster"
     CLUSTER_ZONE = "northamerica-northeast1"
     JENKINS_CRED = "gke-cluster-demo"
     DOCKER_REGISTRY_SECRET = 'docker-hub-secret'
@@ -35,9 +35,9 @@ pipeline {
       steps{
         container('helm') {
             sh """
+             mkdir k8s
              cd ${chartName}
-             helm template --debug . --output-dir k8s
-             ls
+             helm template --debug . --output-dir ../k8s
              """
         }
       }
@@ -45,20 +45,19 @@ pipeline {
     stage('Deploy Development') {
        steps {
          echo "Deploying..."
-       }
 
-        /*
-        container('kubectl') {
-          step([$class: 'KubernetesEngineBuilder',
-                namespace: namespace,
-                projectId: env.PROJECT,
-                clusterName: env.CLUSTER,
-                zone: env.CLUSTER_ZONE,
-                manifestPattern: 'k8s/demo-rest-service/templates/overlays/environments/dev',
-                credentialsId: env.JENKINS_CRED,
-                verifyDeployments: false])
+           container('kubectl') {
+             step([$class: 'KubernetesEngineBuilder',
+                    namespace: namespace,
+                    projectId: env.PROJECT,
+                    clusterName: env.CLUSTER,
+                    zone: env.CLUSTER_ZONE,
+                    manifestPattern: 'k8s/demo-rest-service/templates/overlays/environments/dev',
+                    credentialsId: env.JENKINS_CRED,
+                    verifyDeployments: false])
+            }
+
         }
-        */
     }
 
   }
