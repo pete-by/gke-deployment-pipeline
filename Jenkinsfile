@@ -43,6 +43,8 @@ pipeline {
       }
     }
     stage('Deploy Development') {
+       steps {
+       }
 
         /*
         container('kubectl') {
