@@ -18,7 +18,11 @@ spec:
         runAsUser: 1000
         runAsGroup: 1000
     - name: helm
-      image: docker.io/alpine/helm:2.14.0
-   #   command: ["cat"]
+      image: alpine/helm:2.14.0
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+      tty: true
+      command: ["cat"]
   imagePullSecrets:
     - name: regcred
