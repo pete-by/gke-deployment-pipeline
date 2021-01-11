@@ -24,11 +24,15 @@ pipeline {
 
       steps{
 
-        sh """
-        wget https://axamit.jfrog.io/artifactory/helm-stable/${chart}
-        tar -zxvf ${chart}
-        ls
-        """
+        withCredentials([usernamePassword(credentialsId: 'artifactory-secret', usernameVariable: 'HELM_STABLE_USERNAME', passwordVariable: 'HELM_STABLE_PASSWORD')]) {
+
+            sh """
+            wget --auth-no-challenge  --http-user=${HELM_STABLE_USERNAME} --http-password=${HELM_STABLE_PASSWORD} https://axamit.jfrog.io/artifactory/helm-stable/${chart}
+            tar -zxvf ${chart}
+            ls
+            """
+
+        }
 
         /*
         container('helm') {
