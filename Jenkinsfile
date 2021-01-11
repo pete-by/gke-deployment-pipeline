@@ -1,3 +1,8 @@
+def namespace = "default"
+def chartName = "demo-rest-service"
+def version = "1.0.5+c00f7f5"
+def chart = chartName + version + ".tgz"
+
 pipeline {
 
   environment {
@@ -6,11 +11,6 @@ pipeline {
     CLUSTER_ZONE = "northamerica-northeast1"
     JENKINS_CRED = "gke-cluster-demo"
   }
-
-  def namespace = "default"
-  def chartName = "demo-rest-service"
-  def version = "1.0.5+c00f7f5"
-  def chart = chartName + version + ".tgz"
 
   environment {
     DOCKER_REGISTRY_SECRET = 'docker-hub-secret'
