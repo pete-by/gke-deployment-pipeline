@@ -25,7 +25,7 @@ spec:
       tty: true
       command: ["cat"]
     - name: kubectl
-      image: bitnami/kubectl:1.18
+      image: bitnami/kubectl:1.20
       securityContext:
         runAsUser: 1000
         runAsGroup: 1000

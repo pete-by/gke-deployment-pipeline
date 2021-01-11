@@ -50,7 +50,7 @@ pipeline {
              sh """
              ls -LR k8s
              cd ./k8s/demo-rest-service/templates/overlays/envronments/dev
-             kubectl kustomize build . > deployment.yaml
+             kubectl kustomize . > deployment.yaml
              """
 
              step([$class: 'KubernetesEngineBuilder',
