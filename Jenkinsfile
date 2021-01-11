@@ -56,8 +56,6 @@ pipeline {
                 verifyDeployments: false])
         }
         */
-      }
-
     }
 
   }
