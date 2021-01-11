@@ -1,6 +1,6 @@
 def namespace = "default"
 def chartName = "demo-rest-service"
-def version = "1.0.5+c00f7f5"
+def version = "1.0.6+5e750ab"
 def chart = chartName + "-" + version + ".tgz"
 
 pipeline {
@@ -44,15 +44,21 @@ pipeline {
     }
     stage('Deploy Development') {
        steps {
-         echo "Deploying..."
+           echo "Deploying..."
 
            container('kubectl') {
+             sh """
+             ls -LR k8s
+             cd ./k8s/demo-rest-service/templates/overlays/envronments/dev
+             kubectl kustomize build . > deployment.yaml
+             """
+
              step([$class: 'KubernetesEngineBuilder',
                     namespace: namespace,
                     projectId: env.PROJECT,
                     clusterName: env.CLUSTER,
                     zone: env.CLUSTER_ZONE,
-                    manifestPattern: 'k8s/demo-rest-service/templates/overlays/environments/dev',
+                    manifestPattern: 'k8s/demo-rest-service/templates/overlays/envronments/dev/deployment.yaml',
                     credentialsId: env.JENKINS_CRED,
                     verifyDeployments: false])
             }

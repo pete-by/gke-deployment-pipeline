@@ -24,5 +24,12 @@ spec:
         runAsGroup: 1000
       tty: true
       command: ["cat"]
+    - name: kubectl
+      image: bitnami/kubectl:1.18
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+      tty: true
+      command: [ "cat" ]
   imagePullSecrets:
     - name: regcred
