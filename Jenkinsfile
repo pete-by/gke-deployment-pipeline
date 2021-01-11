@@ -8,7 +8,7 @@ pipeline {
   environment {
     PROJECT = "gke-cluster-demo-1"
     CLUSTER = "prod-cluster"
-    CLUSTER_ZONE = "northamerica-northeast1"
+    CLUSTER_ZONE = "northamerica-northeast1-a"
     JENKINS_CRED = "gke-cluster-demo"
     DOCKER_REGISTRY_SECRET = 'docker-hub-secret'
   }
