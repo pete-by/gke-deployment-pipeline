@@ -1,0 +1,24 @@
+
+metadata:
+  labels:
+    app: rest-demo-service
+spec:
+  securityContext:
+    fsGroup: 1000
+  volumes:
+    - name: maven-repo-pv
+      persistentVolumeClaim:
+        claimName: maven-repo-pvc
+  containers:
+    - name: jnlp
+      env:
+        - name: CONTAINER_ENV_VAR
+          value: jnlp
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+    - name: helm
+      image: docker.io/alpine/helm:2.14.0
+      command: ["cat"]
+  imagePullSecrets:
+    - name: regcred
