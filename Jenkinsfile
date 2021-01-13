@@ -1,8 +1,22 @@
+/*
+ 1. check if we have build info annotated with the project revision
+ 2. no -> 3
+ 3. clone project and get tag for a project revision
+ 4. generate artefact name -> 6, set initial stage
+ 5. set next stage
+ 6. fill build-info.yaml
+ 7. make a deployment
+ 6. commit changes to build-info.yaml
+ */
+
+def revision=REVISION // Git revision 7 digit or full
 def namespace = "default"
-def chartName = "demo-rest-service"
+def appName = "demo-rest-service"
+def chartName = appName
 def version = "1.0.6+5e750ab"
 def chart = chartName + "-" + version + ".tgz"
 def kustomizationPath = "k8s/${chartName}/templates/overlays/environments/dev"
+def gitRepo = "git@github.com:pete-by/demo-rest-service.git"
 def helmRepo = "https://axamit.jfrog.io/artifactory/helm-stable"
 
 pipeline {
@@ -21,8 +35,20 @@ pipeline {
       }
   }
   stages {
+    stage('Initialization') {
+      steps {
+        sh "mkdir $appName"
+        dir(appName) {
+            git branch: "$revision",
+                credentialsId: 'github-secret',
+                url: "$gitRepo"
+            sh "ls -LR"
+        }
+      }
+    }
+    /*
     stage('Download Artifact') {
-      steps{
+      steps {
         echo "Downloading Helm chart..."
         withCredentials([usernamePassword(credentialsId: 'artifactory-secret',
                                         usernameVariable: 'HELM_STABLE_USERNAME',
@@ -35,7 +61,7 @@ pipeline {
       }
     }
     stage('Prepare Deployment') {
-      steps{
+      steps {
         echo "Rendering Helm templates..."
 
         container('helm') {
@@ -46,11 +72,11 @@ pipeline {
              """
         }
       }
-    }
+    }*/
     stage('Deploy Development') {
        steps {
            echo "Deploying..."
-
+           /*
            container('kustomize') {
              sh """
              cd ${kustomizationPath}
@@ -58,7 +84,7 @@ pipeline {
              cat deployment.yaml
              """
            }
-           /*
+
            container('kubectl') {
 
              step([$class: 'KubernetesEngineBuilder',
