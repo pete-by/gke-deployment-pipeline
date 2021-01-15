@@ -36,7 +36,7 @@ def stages = [
 ]
 
 def appGitRevision=REVISION // Git revision 7 digit or full of an application
-def appGitRevisionShort = appGitRevision.substring(0, 7) // Git revision 7 digit
+def appGitRevisionShort // Git revision 7 digit
 
 def RELEASE_INFO_FILENAME = "release-info.yaml"
 def commitId // If the file exists, will contain release-info.yaml commit id
@@ -68,6 +68,8 @@ pipeline {
     stages {
         stage('Initialization') {
             steps {
+
+                appGitRevisionShort = appGitRevision.substring(0, 7) // Git revision 7 digit
                 /*
                 script {
                     // Check if we have a release-info commit tagged with the application git revision hash,
