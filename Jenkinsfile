@@ -26,6 +26,9 @@ def getLatestRevisionTagFromGit() {
     latestRevisionTag
 }
 
+def writeReleaseInfo(info) {
+}
+
 def stages = [
    dev : [project: "gke-cluster-demo-1", cluster: "dev-cluster", clusterZone: "northamerica-northeast1-a", credentialsId: "gke-cluster-demo"],
    test : [project: "gke-cluster-demo-1", cluster: "test-cluster", clusterZone: "northamerica-northeast1-a", credentialsId: "gke-cluster-demo"],
@@ -66,7 +69,7 @@ pipeline {
     stages {
         stage('Initialization') {
             steps {
-
+                /*
                 script {
                     // Check if we have a release-info commit tagged with the application git revision hash,
                     // we assume that release-info.yaml is there, but we can check it
@@ -82,7 +85,7 @@ pipeline {
 
                     targetStage = "dev"; // dev or feature (on-demand)
 
-                    /** Checkout application revision to obtain tag and full version of an artifact */
+                    // Checkout application revision to obtain tag and full version of an artifact /
                     sh "mkdir $appName" // create a target folder for checkout
                     dir(appName) {
                         checkout([$class: 'GitSCM', branches: [[name: appGitRevision]],
@@ -92,7 +95,7 @@ pipeline {
                     }
                     sh "rm -rf ./$appName" // clean up
 
-                    /** Create new Release Info */
+                    // Create new Release Info
                     sh "git checkout -b $appVersion" // create a new branch for the application revision
 
                     writeReleaseInfo([
@@ -125,6 +128,7 @@ pipeline {
                     }
 
                 } // if
+                */
             } // steps
         } // stage
 
