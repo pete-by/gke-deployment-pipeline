@@ -120,15 +120,16 @@ pipeline {
           }
 
           writeReleaseInfo(releaseInfo);
-        }
-      }
+        } // if
+
+      } // steps
     } // stage
     stage('Prepare Deployment') {
       steps {
 
         echo "Rendering Helm templates..."
 
-        script{
+        script {
 
             def chart = chartName + "-" + version + ".tgz"
             echo "Downloading Helm chart..."
@@ -139,6 +140,7 @@ pipeline {
               wget --auth-no-challenge  --http-user=\${HELM_STABLE_USERNAME} --http-password=\${HELM_STABLE_PASSWORD} ${helmRepo}/${chart}
               tar -zxvf ${chart}
               """
+            }
 
             container('helm') {
                 sh """
@@ -157,7 +159,7 @@ pipeline {
               cat deployment.yaml
               """
             }
-        }
+        } // script
       }
     }
     stage('Deploying') {
