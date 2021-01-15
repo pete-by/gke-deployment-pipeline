@@ -1,5 +1,3 @@
-import java.util.logging.Logger
-Logger logger = Logger.getLogger('gke-deployment-pipeline')
 
 /**
  Requirements:
@@ -80,7 +78,7 @@ pipeline {
                         commitId = sh returnStdout: true, script: "git rev-list -n 1 $appGitRevisionShort 2> /dev/null || echo ''"
                         commitId = commitId.trim()
                     } catch(err) {
-                        logger.info("Cannot find release-info.yaml: $err")
+                        echo "Cannot find release-info.yaml: $err"
                     }
 
 
@@ -94,7 +92,7 @@ pipeline {
                             checkout([$class: 'GitSCM', branches: [[name: appGitRevision]],
                                 userRemoteConfigs: [[credentialsId: 'github-secret', url: appGitRepo]]])
                             appVersion = getLatestRevisionTagFromGit() + "-" + appGitRevisionShort
-                            logger.info("version: $appVersion")
+                            echo "version: $appVersion"
                         }
                         sh "rm -rf ./$appName" // clean up
 
