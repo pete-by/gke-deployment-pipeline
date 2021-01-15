@@ -1,6 +1,5 @@
-import java.util.logging.Logger
-
-def Logger logger = Logger.getLogger('gke-deployment-pipeline')
+//import java.util.logging.Logger
+//def Logger logger = Logger.getLogger('gke-deployment-pipeline')
 
 /**
  Requirements:
