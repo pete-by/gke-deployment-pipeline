@@ -27,6 +27,7 @@ def getLatestRevisionTagFromGit() {
 }
 
 def writeReleaseInfo(info) {
+  echo info
 }
 
 def STAGES = [
@@ -81,35 +82,34 @@ pipeline {
                     } catch(err) {
                         logger.info("Cannot find release-info.yaml: $err")
                     }
-                }
 
-                if(!commitId) { // we haven't deployed corresponding application version yet
 
-                    targetStage = "dev"; // dev or feature (on-demand)
+                    if(!commitId) { // we haven't deployed corresponding application version yet
 
-                    // Checkout application revision to obtain tag and full version of an artifact /
-                    sh "mkdir $appName" // create a target folder for checkout
-                    dir(appName) {
-                        checkout([$class: 'GitSCM', branches: [[name: appGitRevision]],
-                            userRemoteConfigs: [[credentialsId: 'github-secret', url: appGitRepo]]])
-                        appVersion = getLatestRevisionTagFromGit() + "-" + appGitRevisionShort
-                        logger.info("version: $appVersion")
-                    }
-                    sh "rm -rf ./$appName" // clean up
+                        targetStage = "dev"; // dev or feature (on-demand)
 
-                    // Create new Release Info
-                    sh "git checkout -b $appVersion" // create a new branch for the application revision
+                        // Checkout application revision to obtain tag and full version of an artifact /
+                        sh "mkdir $appName" // create a target folder for checkout
+                        dir(appName) {
+                            checkout([$class: 'GitSCM', branches: [[name: appGitRevision]],
+                                userRemoteConfigs: [[credentialsId: 'github-secret', url: appGitRepo]]])
+                            appVersion = getLatestRevisionTagFromGit() + "-" + appGitRevisionShort
+                            logger.info("version: $appVersion")
+                        }
+                        sh "rm -rf ./$appName" // clean up
 
-                    writeReleaseInfo([
-                        version: appVersion, stage: targetStage,
-                        vcs: [revision: appGitRevision, url: appGitRepo],
-                        modules: [[name: appName,
-                                   artifacts: [name: appName + "-chart", type: "helm", sha1: "TODO", md5: "TODO"]]]
-                    ]);
+                        // Create new Release Info
+                        sh "git checkout -b $appVersion" // create a new branch for the application revision
 
-                } else { // the corresponding application version was deployed before at least once
+                        writeReleaseInfo([
+                            version: appVersion, stage: targetStage,
+                            vcs: [revision: appGitRevision, url: appGitRepo],
+                            modules: [[name: appName,
+                                       artifacts: [name: appName + "-chart", type: "helm", sha1: "TODO", md5: "TODO"]]]
+                        ]);
 
-                    script {
+                    } else { // the corresponding application version was deployed before at least once
+
                         def releaseInfo = readYaml file: "$RELEASE_INFO_FILENAME"
                         if(releaseInfo.status == "approved") {
                             // Determine next stage
@@ -127,9 +127,8 @@ pipeline {
                         }
 
                         writeReleaseInfo(releaseInfo);
-                    }
-
-                } // if
+                    } // if
+                }
 
             } // steps
         } // stage
@@ -138,7 +137,7 @@ pipeline {
             steps {
 
                 echo "Rendering Helm templates..."
-/*
+               /*
                 script {
 
                     def chart = chartName + "-" + version + ".tgz"
