@@ -54,147 +54,152 @@ def targetStage
 
 pipeline {
 
-  environment {
-    DOCKER_REGISTRY_SECRET = 'docker-hub-secret'
-  }
+    environment {
+        DOCKER_REGISTRY_SECRET = 'docker-hub-secret'
+    }
 
-  agent {
-      kubernetes {
-          yamlFile 'KubernetesPod.yaml'
-      }
-  }
-  stages {
-    stage('Initialization') {
-      steps {
-        // Check if we have a release-info commit tagged with the application git revision hash,
-        // we assume that release-info.yaml is there, but we can check it
-        try {
-          commitId = sh returnStdout: true, script: "git rev-list -n 1 $appGitRevisionShort 2> /dev/null || echo ''"
-          commitId = commitId.trim()
-        } catch(err) {
-          logger.info("Cannot find release-info.yaml: $err")
+    agent {
+        kubernetes {
+            yamlFile 'KubernetesPod.yaml'
         }
-
-        if(!commitId) { // we haven't deployed corresponding application version yet
-
-            targetStage = "dev"; // dev or feature (on-demand)
-
-            /** Checkout application revision to obtain tag and full version of an artifact */
-            sh "mkdir $appName" // create a target folder for checkout
-            dir(appName) {
-                checkout([$class: 'GitSCM', branches: [[name: appGitRevision]],
-                    userRemoteConfigs: [[credentialsId: 'github-secret', url: appGitRepo]]])
-                appVersion = getLatestRevisionTagFromGit() + "-" + appGitRevisionShort
-                logger.info("version: $appVersion")
-            }
-            sh "rm -rf ./$appName" // clean up
-
-            /** Create new Release Info */
-            sh "git checkout -b $appVersion" // create a new branch for the application revision
-
-            writeReleaseInfo([
-                version: appVersion, stage: targetStage,
-                vcs: [revision: appGitRevision, url: appGitRepo],
-                modules: [[name: appName,
-                           artifacts: [name: appName + "-chart", type: "helm", sha1: "TODO", md5: "TODO"]]]
-            ]);
-
-        } else { // the corresponding application version was deployed before at least once
-
-          script {
-              def releaseInfo = readYaml file: "$RELEASE_INFO_FILENAME"
-              if(releaseInfo.status == "approved") {
-                // Determine next stage
-                def currentStage
-                for (stage in stages) {
-                  if(currentStage) {
-                    targetStage = stage // update next stage
-                    break
-                  } else if(stage.key == targetStage) {
-                    currentStage = targetStage
-                  }
+    }
+    stages {
+        stage('Initialization') {
+            steps {
+                // Check if we have a release-info commit tagged with the application git revision hash,
+                // we assume that release-info.yaml is there, but we can check it
+                try {
+                    commitId = sh returnStdout: true, script: "git rev-list -n 1 $appGitRevisionShort 2> /dev/null || echo ''"
+                    commitId = commitId.trim()
+                } catch(err) {
+                    logger.info("Cannot find release-info.yaml: $err")
                 }
-              } else {
-                targetStage = "";
-              }
-          }
 
-          writeReleaseInfo(releaseInfo);
-        } // if
+                if(!commitId) { // we haven't deployed corresponding application version yet
 
-      } // steps
-    } // stage
-    stage('Prepare Deployment') {
-      steps {
+                    targetStage = "dev"; // dev or feature (on-demand)
 
-        echo "Rendering Helm templates..."
+                    /** Checkout application revision to obtain tag and full version of an artifact */
+                    sh "mkdir $appName" // create a target folder for checkout
+                    dir(appName) {
+                        checkout([$class: 'GitSCM', branches: [[name: appGitRevision]],
+                            userRemoteConfigs: [[credentialsId: 'github-secret', url: appGitRepo]]])
+                        appVersion = getLatestRevisionTagFromGit() + "-" + appGitRevisionShort
+                        logger.info("version: $appVersion")
+                    }
+                    sh "rm -rf ./$appName" // clean up
 
-        script {
+                    /** Create new Release Info */
+                    sh "git checkout -b $appVersion" // create a new branch for the application revision
 
-            def chart = chartName + "-" + version + ".tgz"
-            echo "Downloading Helm chart..."
-            withCredentials([usernamePassword(credentialsId: 'artifactory-secret',
-                                            usernameVariable: 'HELM_STABLE_USERNAME',
-                                            passwordVariable: 'HELM_STABLE_PASSWORD')]) {
-              sh """
-              wget --auth-no-challenge  --http-user=\${HELM_STABLE_USERNAME} --http-password=\${HELM_STABLE_PASSWORD} ${helmRepo}/${chart}
-              tar -zxvf ${chart}
-              """
-            }
+                    writeReleaseInfo([
+                        version: appVersion, stage: targetStage,
+                        vcs: [revision: appGitRevision, url: appGitRepo],
+                        modules: [[name: appName,
+                                   artifacts: [name: appName + "-chart", type: "helm", sha1: "TODO", md5: "TODO"]]]
+                    ]);
 
-            container('helm') {
-                sh """
-                 mkdir k8s
-                 cd ${chartName}
-                 helm template --debug . --output-dir ../k8s
-                 """
-            }
+                } else { // the corresponding application version was deployed before at least once
 
-            echo "Rendering Kustomize config..."
-            def kustomizationPath = "k8s/${chartName}/templates/overlays/environments/$targetStage"
-            container('kustomize') {
-              sh """
-              cd ${kustomizationPath}
-              kustomize build . > deployment.yaml
-              cat deployment.yaml
-              """
-            }
-        } // script
-      }
-    }
-    stage('Deploying') {
-       steps {
+                    script {
+                        def releaseInfo = readYaml file: "$RELEASE_INFO_FILENAME"
+                        if(releaseInfo.status == "approved") {
+                            // Determine next stage
+                            def currentStage
+                            for (stage in stages) {
+                                if(currentStage) {
+                                    targetStage = stage // update next stage
+                                    break
+                                } else if(stage.key == targetStage) {
+                                    currentStage = targetStage
+                                }
+                            }
+                        } else {
+                            targetStage = "";
+                        }
 
-           // TODO use locks https://plugins.jenkins.io/lockable-resources
-           script {
+                        writeReleaseInfo(releaseInfo);
+                    }
 
-               echo "Deploying to $targetStage..."
+                } // if
+            } // steps
+        } // stage
 
-               /*
-               container('kubectl') {
-                 def stage = stages[targetStage]
-                 step([$class: 'KubernetesEngineBuilder',
-                        namespace: namespace,
-                        projectId: stage.project,
-                        clusterName: stage.cluster,
-                        zone: stage.clusterZone,
-                        manifestPattern: '${kustomizationPath}/deployment.yaml',
-                        credentialsId: stage.credentialsId,
-                        verifyDeployments: false])
-               } */
+        stage('Prepare Deployment') {
+            steps {
+                /*
+                echo "Rendering Helm templates..."
 
-               // Write status to release-info.yaml and target stage branch
-               echo "Saving deployment information..."
-               sh "git commit -m \"Deployed release $appVersion\""
-               sh "git push"
-               commitId = sh "git rev-parse HEAD"
-               sh "git checkout -b $targetStage"
-               sh "git cherry-pick $commitId"
-               sh "git push"
-           }
-       }
+                script {
 
-    }
-  } // stages
+                    def chart = chartName + "-" + version + ".tgz"
+                    echo "Downloading Helm chart..."
+                    withCredentials([usernamePassword(credentialsId: 'artifactory-secret',
+                                                    usernameVariable: 'HELM_STABLE_USERNAME',
+                                                    passwordVariable: 'HELM_STABLE_PASSWORD')]) {
+                        sh """
+                           wget --auth-no-challenge  --http-user=\${HELM_STABLE_USERNAME} --http-password=\${HELM_STABLE_PASSWORD} ${helmRepo}/${chart}
+                           tar -zxvf ${chart}
+                           """
+                    }
 
-}
+                    container('helm') {
+                        sh """
+                           mkdir k8s
+                           cd ${chartName}
+                           helm template --debug . --output-dir ../k8s
+                           """
+                    }
+
+                    echo "Rendering Kustomize config..."
+                    def kustomizationPath = "k8s/${chartName}/templates/overlays/environments/$targetStage"
+                    container('kustomize') {
+                        sh """
+                           cd ${kustomizationPath}
+                           kustomize build . > deployment.yaml
+                           cat deployment.yaml
+                           """
+                    }
+
+                } // script
+                */
+            } // steps
+        } // stage
+        stage('Deploying') {
+            steps {
+
+                /*
+                echo "Deploying to $targetStage..."
+
+                // TODO use locks https://plugins.jenkins.io/lockable-resources
+                script {
+
+
+                    container('kubectl') {
+                        def stage = stages[targetStage]
+                        step([$class: 'KubernetesEngineBuilder',
+                            namespace: namespace,
+                            projectId: stage.project,
+                            clusterName: stage.cluster,
+                            zone: stage.clusterZone,
+                            manifestPattern: '${kustomizationPath}/deployment.yaml',
+                            credentialsId: stage.credentialsId,
+                            verifyDeployments: false])
+                    }
+
+                    // Write status to release-info.yaml and target stage branch
+                    echo "Saving deployment information..."
+                    sh "git commit -m \"Deployed release $appVersion\""
+                    sh "git push"
+                    commitId = sh "git rev-parse HEAD"
+                    sh "git checkout -b $targetStage"
+                    sh "git cherry-pick $commitId"
+                    sh "git push"
+                }
+                */
+            } // steps
+
+        } // stage
+    } // stages
+
+} // pipeline
