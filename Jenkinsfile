@@ -96,7 +96,8 @@ pipeline {
                 version: appVersion, stage: targetStage,
                 vcs: [revision: appGitRevision, url: appGitRepo],
                 modules: [[name: appName,
-                           artifacts: [name: appName + "-chart", type: "helm", sha1: "TODO", md5: "TODO"]]);
+                           artifacts: [name: appName + "-chart", type: "helm", sha1: "TODO", md5: "TODO"]]]
+            ]);
 
         } else { // the corresponding application version was deployed before at least once
 
