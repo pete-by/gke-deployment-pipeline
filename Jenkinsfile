@@ -21,7 +21,7 @@
 def getLatestRevisionTagFromGit() {
     def defaultRevisionTag = '1.0.0'
     def latestRevisionTag = sh returnStdout: true, script: "git describe --match=*.*.* --abbrev=0 2> /dev/null || echo ${defaultRevisionTag}"
-    latestRevisionTag
+    latestRevisionTag?.trim()
 }
 
 def writeReleaseInfo(info) {
