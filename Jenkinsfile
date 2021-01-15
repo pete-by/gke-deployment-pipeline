@@ -19,6 +19,8 @@
  8. make a deployment
  9. commit changes to build-info.yaml
  */
+
+/*
 def getLatestRevisionTagFromGit() {
     def defaultRevisionTag = '1.0.0'
     def latestRevisionTag = sh returnStdout: true, script: "git describe --match=*.*.* --abbrev=0 2> /dev/null || echo ${defaultRevisionTag}"
@@ -35,8 +37,8 @@ def stages = [
    prod : [project: "gke-cluster-demo-1", cluster: "prod-cluster", clusterZone: "northamerica-northeast1-a", credentialsId: "gke-cluster-demo"]
 ]
 
-def appGitRevision=REVISION // Git revision 7 digit or full of an application
-def appGitRevisionShort // Git revision 7 digit
+def appGitRevision = REVISION // Git revision 7 digit or full of an application
+def appGitRevisionShort = appGitRevision.substring(0, 7) // Git revision 7 digit
 
 def RELEASE_INFO_FILENAME = "release-info.yaml"
 def commitId // If the file exists, will contain release-info.yaml commit id
@@ -53,6 +55,7 @@ def chartName = appName
 def helmRepo = "https://axamit.jfrog.io/artifactory/helm-stable"
 
 def targetStage
+*/
 
 pipeline {
 
@@ -69,7 +72,6 @@ pipeline {
         stage('Initialization') {
             steps {
 
-                appGitRevisionShort = appGitRevision.substring(0, 7) // Git revision 7 digit
                 /*
                 script {
                     // Check if we have a release-info commit tagged with the application git revision hash,
