@@ -72,6 +72,8 @@ pipeline {
         stage('Initialization') {
             steps {
 
+                echo "Initialization..."
+
                 /*
                 script {
                     // Check if we have a release-info commit tagged with the application git revision hash,
@@ -137,9 +139,9 @@ pipeline {
 
         stage('Prepare Deployment') {
             steps {
-                /*
-                echo "Rendering Helm templates..."
 
+                echo "Rendering Helm templates..."
+/*
                 script {
 
                     def chart = chartName + "-" + version + ".tgz"
@@ -178,9 +180,8 @@ pipeline {
         stage('Deploying') {
             steps {
 
-                /*
                 echo "Deploying to $targetStage..."
-
+                /*
                 // TODO use locks https://plugins.jenkins.io/lockable-resources
                 script {
 
