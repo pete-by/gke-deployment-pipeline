@@ -66,13 +66,16 @@ pipeline {
     stages {
         stage('Initialization') {
             steps {
-                // Check if we have a release-info commit tagged with the application git revision hash,
-                // we assume that release-info.yaml is there, but we can check it
-                try {
-                    commitId = sh returnStdout: true, script: "git rev-list -n 1 $appGitRevisionShort 2> /dev/null || echo ''"
-                    commitId = commitId.trim()
-                } catch(err) {
-                    logger.info("Cannot find release-info.yaml: $err")
+
+                script {
+                    // Check if we have a release-info commit tagged with the application git revision hash,
+                    // we assume that release-info.yaml is there, but we can check it
+                    try {
+                        commitId = sh returnStdout: true, script: "git rev-list -n 1 $appGitRevisionShort 2> /dev/null || echo ''"
+                        commitId = commitId.trim()
+                    } catch(err) {
+                        logger.info("Cannot find release-info.yaml: $err")
+                    }
                 }
 
                 if(!commitId) { // we haven't deployed corresponding application version yet
