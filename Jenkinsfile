@@ -25,7 +25,7 @@ def getLatestRevisionTagFromGit() {
 }
 
 def writeReleaseInfo(info) {
-  echo info
+  echo info.inspect()
 }
 
 def STAGES = [
