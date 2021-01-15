@@ -1,5 +1,5 @@
-//import java.util.logging.Logger
-//def Logger logger = Logger.getLogger('gke-deployment-pipeline')
+import java.util.logging.Logger
+Logger logger = Logger.getLogger('gke-deployment-pipeline')
 
 /**
  Requirements:
@@ -20,7 +20,6 @@
  9. commit changes to build-info.yaml
  */
 
-/*
 def getLatestRevisionTagFromGit() {
     def defaultRevisionTag = '1.0.0'
     def latestRevisionTag = sh returnStdout: true, script: "git describe --match=*.*.* --abbrev=0 2> /dev/null || echo ${defaultRevisionTag}"
@@ -30,7 +29,7 @@ def getLatestRevisionTagFromGit() {
 def writeReleaseInfo(info) {
 }
 
-def stages = [
+def STAGES = [
    dev : [project: "gke-cluster-demo-1", cluster: "dev-cluster", clusterZone: "northamerica-northeast1-a", credentialsId: "gke-cluster-demo"],
    test : [project: "gke-cluster-demo-1", cluster: "test-cluster", clusterZone: "northamerica-northeast1-a", credentialsId: "gke-cluster-demo"],
    staging : [project: "gke-cluster-demo-1", cluster: "staging-cluster", clusterZone: "northamerica-northeast1-a", credentialsId: "gke-cluster-demo"],
@@ -55,7 +54,6 @@ def chartName = appName
 def helmRepo = "https://axamit.jfrog.io/artifactory/helm-stable"
 
 def targetStage
-*/
 
 pipeline {
 
@@ -74,7 +72,6 @@ pipeline {
 
                 echo "Initialization..."
 
-                /*
                 script {
                     // Check if we have a release-info commit tagged with the application git revision hash,
                     // we assume that release-info.yaml is there, but we can check it
@@ -117,11 +114,11 @@ pipeline {
                         if(releaseInfo.status == "approved") {
                             // Determine next stage
                             def currentStage
-                            for (stage in stages) {
+                            for (s in stages) {
                                 if(currentStage) {
-                                    targetStage = stage // update next stage
+                                    targetStage = s // update next stage
                                     break
-                                } else if(stage.key == targetStage) {
+                                } else if(s.key == targetStage) {
                                     currentStage = targetStage
                                 }
                             }
@@ -133,7 +130,7 @@ pipeline {
                     }
 
                 } // if
-                */
+
             } // steps
         } // stage
 
@@ -180,21 +177,22 @@ pipeline {
         stage('Deploying') {
             steps {
 
-                echo "Deploying to $targetStage..."
+                echo "Deploying..."
+                //echo "Deploying to $targetStage..."
                 /*
                 // TODO use locks https://plugins.jenkins.io/lockable-resources
                 script {
 
 
                     container('kubectl') {
-                        def stage = stages[targetStage]
+                        def s = STAGES[targetStage]
                         step([$class: 'KubernetesEngineBuilder',
                             namespace: namespace,
-                            projectId: stage.project,
-                            clusterName: stage.cluster,
-                            zone: stage.clusterZone,
+                            projectId: s.project,
+                            clusterName: s.cluster,
+                            zone: s.clusterZone,
                             manifestPattern: '${kustomizationPath}/deployment.yaml',
-                            credentialsId: stage.credentialsId,
+                            credentialsId: s.credentialsId,
                             verifyDeployments: false])
                     }
 
