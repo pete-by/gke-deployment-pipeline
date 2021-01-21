@@ -35,8 +35,8 @@ def STAGES = [
    prod : [project: "gke-cluster-demo-1", cluster: "prod-cluster", clusterZone: "northamerica-northeast1-a", credentialsId: "gke-cluster-demo"]
 ]
 
-def appGitRevision = REVISION // Git revision 7 digit or full of an application
-def appGitRevisionShort = appGitRevision.substring(0, 7) // Git revision 7 digit
+def appGitRevision // Git revision 7 digit or full of an application
+def appGitRevisionShort // Git revision 7 digit
 
 def RELEASE_INFO_FILENAME = "release-info.yaml"
 def commitId // If the file exists, will contain release-info.yaml commit id
@@ -65,6 +65,11 @@ pipeline {
             yamlFile 'KubernetesPod.yaml'
         }
     }
+
+    parameters {
+        string(name: 'REVISION', defaultValue: '', description: 'Revision to deploy')
+    }
+
     stages {
         stage('Initialization') {
             steps {
@@ -72,6 +77,10 @@ pipeline {
                 echo "Initialization..."
 
                 script {
+
+                    appGitRevision = params.REVISION
+                    appGitRevisionShort = appGitRevision.substring(0, 7)
+
                     // Check if we have a release-info commit tagged with the application git revision hash,
                     // we assume that release-info.yaml is there, but we can check it
                     try {

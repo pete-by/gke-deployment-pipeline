@@ -5,6 +5,8 @@ metadata:
 spec:
   securityContext:
     fsGroup: 1000
+    runAsUser: 1000
+    runAsGroup: 1000
   volumes:
     - name: maven-repo-pv
       persistentVolumeClaim:
@@ -14,28 +16,16 @@ spec:
       env:
         - name: CONTAINER_ENV_VAR
           value: jnlp
-      securityContext:
-        runAsUser: 1000
-        runAsGroup: 1000
     - name: helm
       image: alpine/helm:2.14.0
-      securityContext:
-        runAsUser: 1000
-        runAsGroup: 1000
       tty: true
       command: ["cat"]
     - name: kustomize
       image: peteby/kustomize:v3.9.1
-      securityContext:
-        runAsUser: 1000
-        runAsGroup: 1000
       tty: true
       command: [ "cat" ]
     - name: kubectl
       image: bitnami/kubectl:1.20
-      securityContext:
-        runAsUser: 1000
-        runAsGroup: 1000
       tty: true
       command: [ "cat" ]
   imagePullSecrets:
