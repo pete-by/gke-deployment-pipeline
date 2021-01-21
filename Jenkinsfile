@@ -25,7 +25,7 @@ def getLatestRevisionTagFromGit() {
 }
 
 def writeReleaseInfo(info) {
-  echo info.inspect()
+  echo info.toMapString()
 }
 
 def STAGES = [
