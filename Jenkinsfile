@@ -200,11 +200,11 @@ def writeReleaseInfo(info) {
 }
 
 def getBranchForStage(stageName) {
-  def branchName = (stageName == 'prod') ? RELEASE_BRANCH_NAME : stageName // master->prod, dev->dev, test->test
+  def branchName = (stageName == 'prod') ? 'master' : stageName // master->prod, dev->dev, test->test
   branchName
 }
 
 def getStageForBranch(branchName) {
-  def stageName = (branchName == RELEASE_BRANCH_NAME) ? 'prod' : branchName // prod->master, dev->dev, test->test
+  def stageName = (branchName == 'master') ? 'prod' : branchName // prod->master, dev->dev, test->test
   stageName
 }
