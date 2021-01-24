@@ -138,11 +138,11 @@ pipeline {
                         container('kubectl') {
                             step([$class: 'KubernetesEngineBuilder',
                                 namespace: namespace,
-                                projectId: s.project,
-                                clusterName: s.cluster,
-                                zone: s.clusterZone,
+                                projectId: targetStage.project,
+                                clusterName: targetStage.cluster,
+                                zone: targetStage.clusterZone,
                                 manifestPattern: '${kustomizationPath}/deployment.yaml',
-                                credentialsId: s.credentialsId,
+                                credentialsId: targetStage.credentialsId,
                                 verifyDeployments: false])
                         }
 
