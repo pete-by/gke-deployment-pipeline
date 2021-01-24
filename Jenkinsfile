@@ -67,6 +67,7 @@ pipeline {
                 echo "Initialization..."
                 script {
                     def releaseInfo = readYaml file: "$RELEASE_INFO_FILENAME"
+                    appVersion = releaseInfo.version
                     stageName = env.BRANCH_NAME
                     targetStage = STAGES[stageName] // stage environment to deploy to
 
@@ -90,7 +91,7 @@ pipeline {
 
                 script {
 
-                    def chart = chartName + "-" + version + ".tgz"
+                    def chart = chartName + "-" + appVersion + ".tgz"
                     echo "Downloading Helm chart..."
                     withCredentials([usernamePassword(credentialsId: 'artifactory-secret',
                                                     usernameVariable: 'HELM_STABLE_USERNAME',
