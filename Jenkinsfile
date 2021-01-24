@@ -162,11 +162,16 @@ pipeline {
 
             def nextStage
             switch (stageName) {
-                case 'dev' : nextStage = 'prod' break // just prod because of short pipeline
-                case 'test' : nextStage = 'staging' break
-                case 'staging' : nextStage = 'prod' break
-                case 'prod' : nextStage = '' break // we do not deploy anywhere else after prod
-                default : nextStage = 'dev' break
+                case 'dev' : nextStage = 'prod'
+                             break // just prod because of short pipeline
+                case 'test' : nextStage = 'staging'
+                              break
+                case 'staging' : nextStage = 'prod'
+                                 break
+                case 'prod' : nextStage = ''
+                              break // we do not deploy anywhere else after prod
+                default : nextStage = 'dev'
+                          break
             }
 
             script {
