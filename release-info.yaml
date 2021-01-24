@@ -1,0 +1,15 @@
+version: 1.0.27-b1c3fc8
+vcs:
+  revision: |
+    b1c3fc81ad2446854d7d00628f5d9752d95c91e7
+  release: 1.0.27
+  url: git@github.com:pete-by/demo-rest-service.git
+modules:
+- name: demo-rest-service
+  artifacts:
+  - name: demo-rest-service
+    filename: demo-rest-service-1.0.27-b1c3fc8.tgz
+    url: https://axamit.jfrog.io/artifactory/helm-stable/demo-rest-service-1.0.27-b1c3fc8.tgz
+    type: helm
+    sha1: TODO
+    md5: TODO
