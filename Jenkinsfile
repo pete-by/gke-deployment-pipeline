@@ -16,9 +16,9 @@
  */
 
 def STAGES = [
-   dev : [project: "gke-cluster-demo-1", cluster: "dev-cluster", clusterZone: "northamerica-northeast1-a", credentialsId: "gke-cluster-demo", skip: true],
-   test : [project: "gke-cluster-demo-1", cluster: "test-cluster", clusterZone: "northamerica-northeast1-a", credentialsId: "gke-cluster-demo", skip: true],
-   staging : [project: "gke-cluster-demo-1", cluster: "staging-cluster", clusterZone: "northamerica-northeast1-a", credentialsId: "gke-cluster-demo", skip: true],
+   dev : [project: "gke-cluster-demo-1", cluster: "dev-cluster", clusterZone: "northamerica-northeast1-a", credentialsId: "gke-cluster-demo", skipDeploy: true],
+   test : [project: "gke-cluster-demo-1", cluster: "test-cluster", clusterZone: "northamerica-northeast1-a", credentialsId: "gke-cluster-demo", skipDeploy: true],
+   staging : [project: "gke-cluster-demo-1", cluster: "staging-cluster", clusterZone: "northamerica-northeast1-a", credentialsId: "gke-cluster-demo", skipDeploy: true],
    prod : [project: "gke-cluster-demo-1", cluster: "prod-cluster", clusterZone: "northamerica-northeast1-a", credentialsId: "gke-cluster-demo"]
 ]
 
@@ -28,6 +28,7 @@ def commitId
 def releaseTag
 def namespace = "default"
 
+def releaseInfo
 def appVersion
 def appTitle= "Demo Rest Service"
 def appName = "demo-rest-service"
@@ -54,7 +55,7 @@ pipeline {
             steps {
                 echo "Initialization..."
                 script {
-                    def releaseInfo = readYaml file: "$RELEASE_INFO_FILENAME"
+                    releaseInfo = readYaml file: "$RELEASE_INFO_FILENAME"
                     appVersion = releaseInfo.version
                     stageName = getStageForBranch(env.BRANCH_NAME) // get stage for current branch
                     targetStage = STAGES[stageName] // stage environment to deploy to
@@ -83,6 +84,7 @@ pipeline {
 
                         def chartName = appName
                         def chartUrl = releaseInfo.modules[0].artefacts[0].url
+
                         echo "Downloading Helm chart..."
 
                         withCredentials([usernamePassword(credentialsId: 'artifactory-secret',
@@ -123,7 +125,7 @@ pipeline {
 
                 script {
                     // deploy if stage exists, otherwise skip
-                    def canDeploy = targetStage && !targetStage.skip && (env.BRANCH_NAME != RELEASE_BRANCH_NAME || releaseTag) // to prevent non-tagged release branch deployment
+                    def canDeploy = targetStage && !targetStage.skipDeploy && (env.BRANCH_NAME != RELEASE_BRANCH_NAME || releaseTag) // to prevent non-tagged release branch deployment
 
                     if(canDeploy) {
                         // TODO use locks https://plugins.jenkins.io/lockable-resources
@@ -200,11 +202,11 @@ def writeReleaseInfo(info) {
 }
 
 def getBranchForStage(stageName) {
-  def branchName = (stageName == 'prod') ? RELEASE_BRANCH_NAME : stageName // master->prod, dev->dev, test->test
+  def branchName = (stageName == 'prod') ? 'master' : stageName // master->prod, dev->dev, test->test
   branchName
 }
 
 def getStageForBranch(branchName) {
-  def stageName = (branchName == RELEASE_BRANCH_NAME) ? 'prod' : branchName // prod->master, dev->dev, test->test
+  def stageName = (branchName == 'master') ? 'prod' : branchName // prod->master, dev->dev, test->test
   stageName
 }
