@@ -18,12 +18,6 @@
  9. commit changes to build-info.yaml
  */
 
-def getLatestRevisionTagFromGit() {
-    def defaultRevisionTag = '1.0.0'
-    def latestRevisionTag = sh returnStdout: true, script: "git describe --match=*.*.* --abbrev=0 2> /dev/null || echo ${defaultRevisionTag}"
-    latestRevisionTag?.trim()
-}
-
 def writeReleaseInfo(info) {
   echo info.toMapString()
 }
@@ -65,78 +59,28 @@ pipeline {
             yamlFile 'KubernetesPod.yaml'
         }
     }
-
-    parameters {
-        string(name: 'REVISION', defaultValue: '', description: 'Revision to deploy')
-    }
-
     stages {
         stage('Initialization') {
             steps {
-
                 echo "Initialization..."
-
                 script {
 
-                    appGitRevision = params.REVISION
-                    appGitRevisionShort = appGitRevision.substring(0, 7)
-
-                    // Check if we have a release-info commit tagged with the application git revision hash,
-                    // we assume that release-info.yaml is there, but we can check it
-                    try {
-                        commitId = sh returnStdout: true, script: "git rev-list -n 1 $appGitRevisionShort 2> /dev/null || echo ''"
-                        commitId = commitId.trim()
-                    } catch(err) {
-                        echo "Cannot find release-info.yaml: $err"
+                    def releaseInfo = readYaml file: "$RELEASE_INFO_FILENAME"
+                    if(releaseInfo.status == "approved") {
+                        switch (releaseInfo.stage) {
+                            case '' : targetStage = 'dev' break
+                            case 'dev' : targetStage = 'prod' break // just prod because of short pipeline
+                            case 'test' : targetStage = 'staging' break
+                            case 'staging' : targetStage = 'prod' break
+                            case 'prod' : targetStage = '' break // we do not deploy anywhere else
+                        }
                     }
 
+                    if(targetStage) { // update release info only if we deploy
+                        writeReleaseInfo(releaseInfo)
+                    }
 
-                    if(!commitId) { // we haven't deployed corresponding application version yet
-
-                        targetStage = "dev"; // dev or feature (on-demand)
-
-                        // Checkout application revision to obtain tag and full version of an artifact /
-                        sh "mkdir $appName" // create a target folder for checkout
-                        dir(appName) {
-                            checkout([$class: 'GitSCM', branches: [[name: appGitRevision]],
-                                userRemoteConfigs: [[credentialsId: 'github-secret', url: appGitRepo]]])
-                            appVersion = getLatestRevisionTagFromGit() + "-" + appGitRevisionShort
-                            echo "version: $appVersion"
-                        }
-                        sh "rm -rf ./$appName" // clean up
-
-                        // Create new Release Info
-                        sh "git checkout -b $appVersion" // create a new branch for the application revision
-
-                        writeReleaseInfo([
-                            version: appVersion, stage: targetStage,
-                            vcs: [revision: appGitRevision, url: appGitRepo],
-                            modules: [[name: appName,
-                                       artifacts: [name: appName + "-chart", type: "helm", sha1: "TODO", md5: "TODO"]]]
-                        ]);
-
-                    } else { // the corresponding application version was deployed before at least once
-
-                        def releaseInfo = readYaml file: "$RELEASE_INFO_FILENAME"
-                        if(releaseInfo.status == "approved") {
-                            // Determine next stage
-                            def currentStage
-                            for (s in stages) {
-                                if(currentStage) {
-                                    targetStage = s // update next stage
-                                    break
-                                } else if(s.key == targetStage) {
-                                    currentStage = targetStage
-                                }
-                            }
-                        } else {
-                            targetStage = "";
-                        }
-
-                        writeReleaseInfo(releaseInfo);
-                    } // if
                 }
-
             } // steps
         } // stage
 
@@ -144,7 +88,7 @@ pipeline {
             steps {
 
                 echo "Rendering Helm templates..."
-               /*
+
                 script {
 
                     def chart = chartName + "-" + version + ".tgz"
@@ -177,7 +121,7 @@ pipeline {
                     }
 
                 } // script
-                */
+
             } // steps
         } // stage
         stage('Deploying') {
@@ -185,10 +129,9 @@ pipeline {
 
                 echo "Deploying..."
                 //echo "Deploying to $targetStage..."
-                /*
+
                 // TODO use locks https://plugins.jenkins.io/lockable-resources
                 script {
-
 
                     container('kubectl') {
                         def s = STAGES[targetStage]
@@ -211,7 +154,7 @@ pipeline {
                     sh "git cherry-pick $commitId"
                     sh "git push"
                 }
-                */
+
             } // steps
 
         } // stage

@@ -7,10 +7,6 @@ spec:
     fsGroup: 1000
     runAsUser: 1000
     runAsGroup: 1000
-  volumes:
-    - name: maven-repo-pv
-      persistentVolumeClaim:
-        claimName: maven-repo-pvc
   containers:
     - name: jnlp
       env:
