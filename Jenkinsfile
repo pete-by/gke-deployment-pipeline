@@ -71,7 +71,6 @@ pipeline {
                     targetStage = STAGES[stageName] // stage environment to deploy to
 
                     commitId = sh "git rev-parse HEAD"
-                    def commitRevision
                     try {
                         // get a release version (revision) if it is associated with the commit
                         commitRevision = sh returnStdout: true, script: "git describe --exact-match --tags $commitId 2> /dev/null || echo ''"
