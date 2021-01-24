@@ -22,9 +22,9 @@ def writeReleaseInfo(info) {
   writeYaml file: 'release-info.yaml', data: releaseInfo
 }
 
-def getBranchForStage(stage) {
-  def branch = ($targetStage == 'prod') ? 'master' : $targetStage // master->prod, dev->dev, test->test
-  branch
+def getBranchForStage(stageName) {
+  def branchName = (stageName == 'prod') ? 'master' : stageName // master->prod, dev->dev, test->test
+  branchName
 }
 
 def STAGES = [
@@ -138,11 +138,11 @@ pipeline {
                         container('kubectl') {
                             step([$class: 'KubernetesEngineBuilder',
                                 namespace: namespace,
-                                projectId: s.project,
-                                clusterName: s.cluster,
-                                zone: s.clusterZone,
+                                projectId: targetStage.project,
+                                clusterName: targetStage.cluster,
+                                zone: targetStage.clusterZone,
                                 manifestPattern: '${kustomizationPath}/deployment.yaml',
-                                credentialsId: s.credentialsId,
+                                credentialsId: targetStage.credentialsId,
                                 verifyDeployments: false])
                         }
 
