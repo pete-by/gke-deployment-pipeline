@@ -71,7 +71,7 @@ pipeline {
                     stageName = env.BRANCH_NAME
                     targetStage = STAGES[stageName] // stage environment to deploy to
 
-                    commitId = sh "git rev-parse HEAD"
+                    commitId = sh returnStdout: true, script: 'git rev-parse HEAD'
                     try {
                         // get a release version (revision) if it is associated with the commit
                         commitRevision = sh returnStdout: true, script: "git describe --exact-match --tags $commitId 2> /dev/null || echo ''"
@@ -91,33 +91,36 @@ pipeline {
 
                 script {
 
-                    def chart = chartName + "-" + appVersion + ".tgz"
-                    echo "Downloading Helm chart..."
-                    withCredentials([usernamePassword(credentialsId: 'artifactory-secret',
-                                                    usernameVariable: 'HELM_STABLE_USERNAME',
-                                                    passwordVariable: 'HELM_STABLE_PASSWORD')]) {
-                        sh """
-                           wget --auth-no-challenge  --http-user=\${HELM_STABLE_USERNAME} --http-password=\${HELM_STABLE_PASSWORD} ${helmRepo}/${chart}
-                           tar -zxvf ${chart}
-                           """
-                    }
+                    if(targetStage) {
 
-                    container('helm') {
-                        sh """
-                           mkdir k8s
-                           cd ${chartName}
-                           helm template --debug . --output-dir ../k8s
-                           """
-                    }
+                        def chart = chartName + "-" + appVersion + ".tgz"
+                        echo "Downloading Helm chart..."
+                        withCredentials([usernamePassword(credentialsId: 'artifactory-secret',
+                                                        usernameVariable: 'HELM_STABLE_USERNAME',
+                                                        passwordVariable: 'HELM_STABLE_PASSWORD')]) {
+                            sh """
+                               wget --auth-no-challenge  --http-user=\${HELM_STABLE_USERNAME} --http-password=\${HELM_STABLE_PASSWORD} ${helmRepo}/${chart}
+                               tar -zxvf ${chart}
+                               """
+                        }
 
-                    echo "Rendering Kustomize config..."
-                    def kustomizationPath = "k8s/${chartName}/templates/overlays/environments/$targetStage"
-                    container('kustomize') {
-                        sh """
-                           cd ${kustomizationPath}
-                           kustomize build . > deployment.yaml
-                           cat deployment.yaml
-                           """
+                        container('helm') {
+                            sh """
+                               mkdir k8s
+                               cd ${chartName}
+                               helm template --debug . --output-dir ../k8s
+                               """
+                        }
+
+                        echo "Rendering Kustomize config..."
+                        def kustomizationPath = "k8s/${chartName}/templates/overlays/environments/$targetStage"
+                        container('kustomize') {
+                            sh """
+                               cd ${kustomizationPath}
+                               kustomize build . > deployment.yaml
+                               cat deployment.yaml
+                               """
+                        }
                     }
 
                 } // script
