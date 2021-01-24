@@ -157,37 +157,38 @@ pipeline {
 
         stage('Validation') {
 
-            echo "Deployment validation..."
+            steps {
+                echo "Deployment validation..."
 
-            script {
+                script {
 
-                def nextStage
-                switch (stageName) {
-                    case 'dev' : nextStage = 'prod'
-                                 break // just prod because of short pipeline
-                    case 'test' : nextStage = 'staging'
+                    def nextStage
+                    switch (stageName) {
+                        case 'dev' : nextStage = 'prod'
+                                     break // just prod because of short pipeline
+                        case 'test' : nextStage = 'staging'
+                                      break
+                        case 'staging' : nextStage = 'prod'
+                                         break
+                        case 'prod' : nextStage = ''
+                                      break // we do not deploy anywhere else after prod
+                        default : nextStage = 'dev'
                                   break
-                    case 'staging' : nextStage = 'prod'
-                                     break
-                    case 'prod' : nextStage = ''
-                                  break // we do not deploy anywhere else after prod
-                    default : nextStage = 'dev'
-                              break
-                }
+                    }
 
-                timeout(time: 30, unit: 'MINUTES') {
-                    input(id: "Deploy Gate", message: "Deploy to $nextStage?", ok: 'Deploy')
-                    // commit release info to next stage branch to trigger deployment
-                    def branch = getBranchForStage(nextStage)
-                    sh """
-                    git checkout $branch
-                    git cherry-pick $commitId
-                    git tag -a $commitRevision -m 'Jenkins Deployment Agent'
-                    git push --atomic --tags -u origin $branch
-                    """
+                    timeout(time: 30, unit: 'MINUTES') {
+                        input(id: "Deploy Gate", message: "Deploy to $nextStage?", ok: 'Deploy')
+                        // commit release info to next stage branch to trigger deployment
+                        def branch = getBranchForStage(nextStage)
+                        sh """
+                        git checkout $branch
+                        git cherry-pick $commitId
+                        git tag -a $commitRevision -m 'Jenkins Deployment Agent'
+                        git push --atomic --tags -u origin $branch
+                        """
+                    }
                 }
             }
-
         }
 
     } // stages
