@@ -28,6 +28,7 @@ def commitId
 def releaseTag
 def namespace = "default"
 
+def releaseInfo
 def appVersion
 def appTitle= "Demo Rest Service"
 def appName = "demo-rest-service"
@@ -54,7 +55,7 @@ pipeline {
             steps {
                 echo "Initialization..."
                 script {
-                    def releaseInfo = readYaml file: "$RELEASE_INFO_FILENAME"
+                    releaseInfo = readYaml file: "$RELEASE_INFO_FILENAME"
                     appVersion = releaseInfo.version
                     stageName = getStageForBranch(env.BRANCH_NAME) // get stage for current branch
                     targetStage = STAGES[stageName] // stage environment to deploy to
@@ -83,6 +84,7 @@ pipeline {
 
                         def chartName = appName
                         def chartUrl = releaseInfo.modules[0].artefacts[0].url
+
                         echo "Downloading Helm chart..."
 
                         withCredentials([usernamePassword(credentialsId: 'artifactory-secret',
