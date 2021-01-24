@@ -23,7 +23,7 @@ def writeReleaseInfo(info) {
 }
 
 def getBranchForStage(stage) {
-  def branch = ($targetStage == 'prod') ? 'master' : $targetStage // master->prod, dev->dev, test->test
+  def branch = (stage == 'prod') ? 'master' : stage // master->prod, dev->dev, test->test
   branch
 }
 
