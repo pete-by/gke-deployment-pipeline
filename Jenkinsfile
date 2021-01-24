@@ -122,9 +122,8 @@ pipeline {
             steps {
 
                 script {
-
-                    def canDeploy = targetStage && !targetStage.skip // deploy if stage exists, otherwise skip
-                                 && (env.BRANCH_NAME != RELEASE_BRANCH_NAME || releaseTag) // to prevent non-tagged release branch deployment
+                    // deploy if stage exists, otherwise skip
+                    def canDeploy = targetStage && !targetStage.skip && (env.BRANCH_NAME != RELEASE_BRANCH_NAME || releaseTag) // to prevent non-tagged release branch deployment
 
                     if(canDeploy) {
                         // TODO use locks https://plugins.jenkins.io/lockable-resources
