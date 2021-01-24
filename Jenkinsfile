@@ -67,11 +67,11 @@ pipeline {
                 echo "Initialization..."
                 script {
                     def releaseInfo = readYaml file: "$RELEASE_INFO_FILENAME"
+                    appVersion = releaseInfo.version
                     stageName = env.BRANCH_NAME
                     targetStage = STAGES[stageName] // stage environment to deploy to
 
-                    commitId = sh "git rev-parse HEAD"
-                    def commitRevision
+                    commitId = sh returnStdout: true, script: 'git rev-parse HEAD'
                     try {
                         // get a release version (revision) if it is associated with the commit
                         commitRevision = sh returnStdout: true, script: "git describe --exact-match --tags $commitId 2> /dev/null || echo ''"
@@ -91,33 +91,36 @@ pipeline {
 
                 script {
 
-                    def chart = chartName + "-" + version + ".tgz"
-                    echo "Downloading Helm chart..."
-                    withCredentials([usernamePassword(credentialsId: 'artifactory-secret',
-                                                    usernameVariable: 'HELM_STABLE_USERNAME',
-                                                    passwordVariable: 'HELM_STABLE_PASSWORD')]) {
-                        sh """
-                           wget --auth-no-challenge  --http-user=\${HELM_STABLE_USERNAME} --http-password=\${HELM_STABLE_PASSWORD} ${helmRepo}/${chart}
-                           tar -zxvf ${chart}
-                           """
-                    }
+                    if(targetStage) {
 
-                    container('helm') {
-                        sh """
-                           mkdir k8s
-                           cd ${chartName}
-                           helm template --debug . --output-dir ../k8s
-                           """
-                    }
+                        def chart = chartName + "-" + appVersion + ".tgz"
+                        echo "Downloading Helm chart..."
+                        withCredentials([usernamePassword(credentialsId: 'artifactory-secret',
+                                                        usernameVariable: 'HELM_STABLE_USERNAME',
+                                                        passwordVariable: 'HELM_STABLE_PASSWORD')]) {
+                            sh """
+                               wget --auth-no-challenge  --http-user=\${HELM_STABLE_USERNAME} --http-password=\${HELM_STABLE_PASSWORD} ${helmRepo}/${chart}
+                               tar -zxvf ${chart}
+                               """
+                        }
 
-                    echo "Rendering Kustomize config..."
-                    def kustomizationPath = "k8s/${chartName}/templates/overlays/environments/$targetStage"
-                    container('kustomize') {
-                        sh """
-                           cd ${kustomizationPath}
-                           kustomize build . > deployment.yaml
-                           cat deployment.yaml
-                           """
+                        container('helm') {
+                            sh """
+                               mkdir k8s
+                               cd ${chartName}
+                               helm template --debug . --output-dir ../k8s
+                               """
+                        }
+
+                        echo "Rendering Kustomize config..."
+                        def kustomizationPath = "k8s/${chartName}/templates/overlays/environments/$targetStage"
+                        container('kustomize') {
+                            sh """
+                               cd ${kustomizationPath}
+                               kustomize build . > deployment.yaml
+                               cat deployment.yaml
+                               """
+                        }
                     }
 
                 } // script
@@ -128,9 +131,9 @@ pipeline {
         stage('Deployment') {
             steps {
 
-                if(targetStage && commitRevision) { // deploy if stage exists, otherwise skip
-                    // TODO use locks https://plugins.jenkins.io/lockable-resources
-                    script {
+                script {
+                    if(targetStage && commitRevision) { // deploy if stage exists, otherwise skip
+                        // TODO use locks https://plugins.jenkins.io/lockable-resources
                         echo "Deploying to $stageName"
                         container('kubectl') {
                             step([$class: 'KubernetesEngineBuilder',
@@ -142,52 +145,54 @@ pipeline {
                                 credentialsId: s.credentialsId,
                                 verifyDeployments: false])
                         }
-                    }
-                } else {
-                    if(!targetStage) {
-                        echo 'Skipping deployment as there is no stage environment to deploy to'
-                    }
-                    if(!commitRevision) {
-                        echo 'Commit is not tagged with a release revision, deployment will be skipped'
+
+                    } else {
+                        if(!targetStage) {
+                            echo 'Skipping deployment as there is no stage environment to deploy to'
+                        }
+                        if(!commitRevision) {
+                            echo 'Commit is not tagged with a release revision, deployment will be skipped'
+                        }
                     }
                 }
-
             } // steps
 
         } // stage
 
         stage('Validation') {
 
-            echo "Deployment validation..."
+            steps {
+                echo "Deployment validation..."
 
-            def nextStage
-            switch (stageName) {
-                case 'dev' : nextStage = 'prod'
-                             break // just prod because of short pipeline
-                case 'test' : nextStage = 'staging'
-                              break
-                case 'staging' : nextStage = 'prod'
-                                 break
-                case 'prod' : nextStage = ''
-                              break // we do not deploy anywhere else after prod
-                default : nextStage = 'dev'
-                          break
-            }
+                script {
 
-            script {
-                timeout(time: 30, unit: 'MINUTES') {
-                    input(id: "Deploy Gate", message: "Deploy to $nextStage?", ok: 'Deploy')
-                    // commit release info to next stage branch to trigger deployment
-                    def branch = getBranchForStage(nextStage)
-                    sh """
-                    git checkout $branch
-                    git cherry-pick $commitId
-                    git tag -a $commitRevision -m 'Jenkins Deployment Agent'
-                    git push --atomic --tags -u origin $branch
-                    """
+                    def nextStage
+                    switch (stageName) {
+                        case 'dev' : nextStage = 'prod'
+                                     break // just prod because of short pipeline
+                        case 'test' : nextStage = 'staging'
+                                      break
+                        case 'staging' : nextStage = 'prod'
+                                         break
+                        case 'prod' : nextStage = ''
+                                      break // we do not deploy anywhere else after prod
+                        default : nextStage = 'dev'
+                                  break
+                    }
+
+                    timeout(time: 30, unit: 'MINUTES') {
+                        input(id: "Deploy Gate", message: "Deploy to $nextStage?", ok: 'Deploy')
+                        // commit release info to next stage branch to trigger deployment
+                        def branch = getBranchForStage(nextStage)
+                        sh """
+                        git checkout $branch
+                        git cherry-pick $commitId
+                        git tag -a $commitRevision -m 'Jenkins Deployment Agent'
+                        git push --atomic --tags -u origin $branch
+                        """
+                    }
                 }
             }
-
         }
 
     } // stages
