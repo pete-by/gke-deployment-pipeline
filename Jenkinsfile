@@ -4,22 +4,27 @@
  1. At each moment of time we want to know what application revision is deployed to each of the environments
  2. We want to track history of application revision promotion through environments
  3. We want to be able to to (re)deploy any application revision to an environment it is qualified (e.g. deploy to demo on demand)
+ 4. We want to be able to update deployment scripts without invoking redeployment
 */
 
 /*
- 1. check if we have build info annotated with the project revision
- 2. no -> 3. yes -> 5
- 3. clone project and get tag for a project revision
- 4. generate artefact name -> 7, set initial stage
- 5. checkout
- 6. set next stage
- 7. fill build-info.yaml
- 8. make a deployment
- 9. commit changes to build-info.yaml
+
+ 1. Checkout from current branch (done by Jenkins)
+ 2. If it is not tagged skip all stages this is to avoid redeployment if Jenkinsfile or KubernetesPod.yaml are updated
+ 2. If previous stage was approved (manually or automatically) set next stage
+ 3. Fill release-info.yaml
+ 4. Make a deployment
+ 5. Commit changes to release-info.yaml to a proper branch linked to a next stage
  */
 
 def writeReleaseInfo(info) {
-  echo info.toMapString()
+  def releaseInfo = info
+  writeYaml file: 'release-info.yaml', data: releaseInfo
+}
+
+def getBranchForStage(stage) {
+  def branch = ($targetStage == 'prod') ? 'master' : $targetStage // master->prod, dev->dev, test->test
+  branch
 }
 
 def STAGES = [
@@ -29,12 +34,8 @@ def STAGES = [
    prod : [project: "gke-cluster-demo-1", cluster: "prod-cluster", clusterZone: "northamerica-northeast1-a", credentialsId: "gke-cluster-demo"]
 ]
 
-def appGitRevision // Git revision 7 digit or full of an application
-def appGitRevisionShort // Git revision 7 digit
-
 def RELEASE_INFO_FILENAME = "release-info.yaml"
-def commitId // If the file exists, will contain release-info.yaml commit id
-
+def commitId
 def commitRevision
 def namespace = "default"
 
@@ -46,6 +47,7 @@ def appGitRepo = "git@github.com:pete-by/demo-rest-service.git"
 def chartName = appName
 def helmRepo = "https://axamit.jfrog.io/artifactory/helm-stable"
 
+def stageName
 def targetStage
 
 pipeline {
@@ -64,20 +66,18 @@ pipeline {
             steps {
                 echo "Initialization..."
                 script {
-
                     def releaseInfo = readYaml file: "$RELEASE_INFO_FILENAME"
-                    if(releaseInfo.status == "approved") {
-                        switch (releaseInfo.stage) {
-                            case '' : targetStage = 'dev' break
-                            case 'dev' : targetStage = 'prod' break // just prod because of short pipeline
-                            case 'test' : targetStage = 'staging' break
-                            case 'staging' : targetStage = 'prod' break
-                            case 'prod' : targetStage = '' break // we do not deploy anywhere else
-                        }
-                    }
+                    stageName = env.BRANCH_NAME
+                    targetStage = STAGES[stageName] // stage environment to deploy to
 
-                    if(targetStage) { // update release info only if we deploy
-                        writeReleaseInfo(releaseInfo)
+                    commitId = sh "git rev-parse HEAD"
+                    def commitRevision
+                    try {
+                        // get a release version (revision) if it is associated with the commit
+                        commitRevision = sh returnStdout: true, script: "git describe --exact-match --tags $commitId 2> /dev/null || echo ''"
+                        commitRevision = commitRevision.trim() // to trim new lines
+                    } catch(err) {
+                        println("Change detected is not tagged with a release revision, deployment will be skipped")
                     }
 
                 }
@@ -124,40 +124,67 @@ pipeline {
 
             } // steps
         } // stage
-        stage('Deploying') {
+
+        stage('Deployment') {
             steps {
 
-                echo "Deploying..."
-                //echo "Deploying to $targetStage..."
-
-                // TODO use locks https://plugins.jenkins.io/lockable-resources
-                script {
-
-                    container('kubectl') {
-                        def s = STAGES[targetStage]
-                        step([$class: 'KubernetesEngineBuilder',
-                            namespace: namespace,
-                            projectId: s.project,
-                            clusterName: s.cluster,
-                            zone: s.clusterZone,
-                            manifestPattern: '${kustomizationPath}/deployment.yaml',
-                            credentialsId: s.credentialsId,
-                            verifyDeployments: false])
+                if(targetStage && commitRevision) { // deploy if stage exists, otherwise skip
+                    // TODO use locks https://plugins.jenkins.io/lockable-resources
+                    script {
+                        echo "Deploying to $stageName"
+                        container('kubectl') {
+                            step([$class: 'KubernetesEngineBuilder',
+                                namespace: namespace,
+                                projectId: s.project,
+                                clusterName: s.cluster,
+                                zone: s.clusterZone,
+                                manifestPattern: '${kustomizationPath}/deployment.yaml',
+                                credentialsId: s.credentialsId,
+                                verifyDeployments: false])
+                        }
                     }
-
-                    // Write status to release-info.yaml and target stage branch
-                    echo "Saving deployment information..."
-                    sh "git commit -m \"Deployed release $appVersion\""
-                    sh "git push"
-                    commitId = sh "git rev-parse HEAD"
-                    sh "git checkout -b $targetStage"
-                    sh "git cherry-pick $commitId"
-                    sh "git push"
+                } else {
+                    if(!targetStage) {
+                        echo 'Skipping deployment as there is no stage environment to deploy to'
+                    }
+                    if(!commitRevision) {
+                        echo 'Commit is not tagged with a release revision, deployment will be skipped'
+                    }
                 }
 
             } // steps
 
         } // stage
+
+        stage('Validation') {
+
+            echo "Deployment validation..."
+
+            def nextStage
+            switch (stageName) {
+                case 'dev' : nextStage = 'prod' break // just prod because of short pipeline
+                case 'test' : nextStage = 'staging' break
+                case 'staging' : nextStage = 'prod' break
+                case 'prod' : nextStage = '' break // we do not deploy anywhere else after prod
+                default : nextStage = 'dev' break
+            }
+
+            script {
+                timeout(time: 30, unit: 'MINUTES') {
+                    input(id: "Deploy Gate", message: "Deploy to $nextStage?", ok: 'Deploy')
+                    // commit release info to next stage branch to trigger deployment
+                    def branch = getBranchForStage(nextStage)
+                    sh """
+                    git checkout $branch
+                    git cherry-pick $commitId
+                    git tag -a $commitRevision -m 'Jenkins Deployment Agent'
+                    git push --atomic --tags -u origin $branch
+                    """
+                }
+            }
+
+        }
+
     } // stages
 
 } // pipeline
