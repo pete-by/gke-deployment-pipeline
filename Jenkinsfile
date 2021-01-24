@@ -127,9 +127,9 @@ pipeline {
         stage('Deployment') {
             steps {
 
-                if(targetStage && commitRevision) { // deploy if stage exists, otherwise skip
-                    // TODO use locks https://plugins.jenkins.io/lockable-resources
-                    script {
+                script {
+                    if(targetStage && commitRevision) { // deploy if stage exists, otherwise skip
+                        // TODO use locks https://plugins.jenkins.io/lockable-resources
                         echo "Deploying to $stageName"
                         container('kubectl') {
                             step([$class: 'KubernetesEngineBuilder',
@@ -141,16 +141,16 @@ pipeline {
                                 credentialsId: s.credentialsId,
                                 verifyDeployments: false])
                         }
-                    }
-                } else {
-                    if(!targetStage) {
-                        echo 'Skipping deployment as there is no stage environment to deploy to'
-                    }
-                    if(!commitRevision) {
-                        echo 'Commit is not tagged with a release revision, deployment will be skipped'
+
+                    } else {
+                        if(!targetStage) {
+                            echo 'Skipping deployment as there is no stage environment to deploy to'
+                        }
+                        if(!commitRevision) {
+                            echo 'Commit is not tagged with a release revision, deployment will be skipped'
+                        }
                     }
                 }
-
             } // steps
 
         } // stage
@@ -159,21 +159,22 @@ pipeline {
 
             echo "Deployment validation..."
 
-            def nextStage
-            switch (stageName) {
-                case 'dev' : nextStage = 'prod'
-                             break // just prod because of short pipeline
-                case 'test' : nextStage = 'staging'
-                              break
-                case 'staging' : nextStage = 'prod'
-                                 break
-                case 'prod' : nextStage = ''
-                              break // we do not deploy anywhere else after prod
-                default : nextStage = 'dev'
-                          break
-            }
-
             script {
+
+                def nextStage
+                switch (stageName) {
+                    case 'dev' : nextStage = 'prod'
+                                 break // just prod because of short pipeline
+                    case 'test' : nextStage = 'staging'
+                                  break
+                    case 'staging' : nextStage = 'prod'
+                                     break
+                    case 'prod' : nextStage = ''
+                                  break // we do not deploy anywhere else after prod
+                    default : nextStage = 'dev'
+                              break
+                }
+
                 timeout(time: 30, unit: 'MINUTES') {
                     input(id: "Deploy Gate", message: "Deploy to $nextStage?", ok: 'Deploy')
                     // commit release info to next stage branch to trigger deployment
