@@ -22,9 +22,9 @@ def writeReleaseInfo(info) {
   writeYaml file: 'release-info.yaml', data: releaseInfo
 }
 
-def getBranchForStage(stage) {
-  def branch = (stage == 'prod') ? 'master' : stage // master->prod, dev->dev, test->test
-  branch
+def getBranchForStage(stageName) {
+  def branchName = (stageName == 'prod') ? 'master' : stageName // master->prod, dev->dev, test->test
+  branchName
 }
 
 def STAGES = [
