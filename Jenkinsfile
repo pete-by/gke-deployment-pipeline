@@ -177,7 +177,7 @@ pipeline {
                             // commit release-info.yaml to next stage branch to trigger deployment
                             def branch = getBranchForStage(nextStage)
                             sh """
-                                git config merge.ours.driver true
+                                git config merge.ours.driver false
                                 git config merge.theirs.driver true
                                 git checkout $branch
                                 git merge origin/${env.BRANCH_NAME}
