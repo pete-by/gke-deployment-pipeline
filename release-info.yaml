@@ -11,5 +11,5 @@ modules:
     filename: demo-rest-service-1.0.27-b1c3fc8.tgz
     url: https://axamit.jfrog.io/artifactory/helm-stable/demo-rest-service-1.0.27-b1c3fc8.tgz
     type: helm
-    sha1: TD
-    md5: TD
+    sha1: TDO
+    md5: TDO
