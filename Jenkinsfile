@@ -177,7 +177,7 @@ pipeline {
                             def branch = getBranchForStage(nextStage)
                             sh """
                                 git checkout $branch
-                                git merge ${env.BRANCH_NAME}
+                                git merge origin/${env.BRANCH_NAME}
                             """
 
                             releaseTag = releaseInfo.release
