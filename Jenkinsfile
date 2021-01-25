@@ -22,6 +22,7 @@ def STAGES = [
    prod : [project: "gke-cluster-demo-1", cluster: "prod-cluster", clusterZone: "northamerica-northeast1-a", credentialsId: "gke-cluster-demo"]
 ]
 
+def GITHUB_SSH_SECRET = 'github-ssh-secret'
 def RELEASE_BRANCH_NAME = 'master'
 def RELEASE_INFO_FILENAME = "release-info.yaml"
 def commitId
@@ -176,6 +177,8 @@ pipeline {
                             // commit release-info.yaml to next stage branch to trigger deployment
                             def branch = getBranchForStage(nextStage)
                             sh """
+                                git config merge.ours.driver true
+                                git config merge.theirs.driver true
                                 git checkout $branch
                                 git merge origin/${env.BRANCH_NAME}
                             """
@@ -184,7 +187,10 @@ pipeline {
                             if(branch == RELEASE_BRANCH_NAME && releaseTag) {
                                 sh "git tag -a $releaseTag -m 'Jenkins Deployment Agent: $releaseTag released'"
                             }
-                            sh "git push --atomic --tags -u origin $branch"
+
+                            sshagent(credentials: [GITHUB_SSH_SECRET]) {
+                                sh "git push --atomic --tags -u origin $branch"
+                            }
                         }
                     }
                 }
