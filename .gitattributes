@@ -1,1 +1,3 @@
+Jenkinsfile merge=ours
+KubernetesPod.yaml merge=ours
 release-info.yaml merge=theirs
