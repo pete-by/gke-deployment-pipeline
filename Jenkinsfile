@@ -94,7 +94,6 @@ pipeline {
                             sh """
                                wget --auth-no-challenge  --http-user=\${HELM_STABLE_USERNAME} --http-password=\${HELM_STABLE_PASSWORD} ${artifact.url}
                                mkdir -p ${artifact.name} && tar -zxvf ${artifact.filename}
-                               pwd
                                """
                         }
 
@@ -102,8 +101,6 @@ pipeline {
                             sh """
                                mkdir k8s
                                cd ${artifact.name}
-                               pwd
-                               ls -la
                                helm template --debug . --output-dir ../k8s
                                """
                         }
