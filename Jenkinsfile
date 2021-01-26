@@ -83,8 +83,8 @@ pipeline {
 
                     if(targetStage) {
 
-                        def chartName = appName
-                        def chartUrl = releaseInfo.modules[0].artefacts[0].url
+                        def module = releaseInfo.modules[0]
+                        def artifact = module.artifacts[0]
 
                         echo "Downloading Helm chart..."
 
@@ -92,21 +92,24 @@ pipeline {
                                                         usernameVariable: 'HELM_STABLE_USERNAME',
                                                         passwordVariable: 'HELM_STABLE_PASSWORD')]) {
                             sh """
-                               wget --auth-no-challenge  --http-user=\${HELM_STABLE_USERNAME} --http-password=\${HELM_STABLE_PASSWORD} ${chartUrl}
-                               tar -zxvf ${chart}
+                               wget --auth-no-challenge  --http-user=\${HELM_STABLE_USERNAME} --http-password=\${HELM_STABLE_PASSWORD} ${artifact.url}
+                               mkdir -p ${artifact.name} && tar -zxvf ${artifact.filename}
+                               pwd
                                """
                         }
 
                         container('helm') {
                             sh """
                                mkdir k8s
-                               cd ${chartName}
+                               cd ${artifact.name}
+                               pwd
+                               ls -la
                                helm template --debug . --output-dir ../k8s
                                """
                         }
 
                         echo "Rendering Kustomize config..."
-                        def kustomizationPath = "k8s/${chartName}/templates/overlays/environments/$targetStage"
+                        def kustomizationPath = "k8s/${artifact.name}/templates/overlays/environments/$stageName"
                         container('kustomize') {
                             sh """
                                cd ${kustomizationPath}
