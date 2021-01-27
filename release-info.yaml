@@ -1,15 +1,15 @@
-version: 1.0.30-30e2425
+version: 1.0.33-f8295e4
 vcs:
   revision: |
-    30e2425f9dbe0093b0ed6413958204351e693021
-  release: 1.0.30
+    f8295e41ec2de3d71d84ef009fa284ac514849f3
+  release: 1.0.33
   url: git@github.com:pete-by/demo-rest-service.git
 modules:
 - name: demo-rest-service
   artifacts:
   - name: demo-rest-service
-    filename: demo-rest-service-1.0.30-30e2425.tgz
-    url: https://axamit.jfrog.io/artifactory/helm-stable/demo-rest-service-1.0.30-30e2425.tgz
+    filename: demo-rest-service-1.0.33-f8295e4.tgz
+    url: https://axamit.jfrog.io/artifactory/helm-stable/demo-rest-service-1.0.33-f8295e4.tgz
     type: helm
     sha1: TODO
     md5: TODO
