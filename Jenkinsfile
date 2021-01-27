@@ -138,13 +138,18 @@ pipeline {
                     if(canDeploy) {
                         // TODO use locks https://plugins.jenkins.io/lockable-resources
                         echo "Deploying to $stageName"
+       
+                        def module = releaseInfo.modules[0]
+                        def artifact = module.artifacts[0]
+                        def kustomizationPath = "k8s/${artifact.name}/templates/overlays/environments/$stageName"
+              
                         container('kubectl') {
                             step([$class: 'KubernetesEngineBuilder',
                                 namespace: namespace,
                                 projectId: targetStage.project,
                                 clusterName: targetStage.cluster,
                                 zone: targetStage.clusterZone,
-                                manifestPattern: '${kustomizationPath}/deployment.yaml',
+                                manifestPattern: "${kustomizationPath}/deployment.yaml",
                                 credentialsId: targetStage.credentialsId,
                                 verifyDeployments: false])
                         }
