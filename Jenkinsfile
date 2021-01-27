@@ -111,9 +111,16 @@ pipeline {
                             sh """
                                cd ${kustomizationPath}
                                kustomize build . > deployment.yaml
-                               cat deployment.yaml
                                """
                         }
+
+                        // Cleanup
+                        echo "Deleting artifact files"
+                        sh """
+                        rm -rf ${env.WORKSPACE}/${artifact.filename}
+                        rm -rf ${env.WORKSPACE}/${artifact.name}
+                        """
+
                     }
 
                 } // script
@@ -141,6 +148,8 @@ pipeline {
                                 credentialsId: targetStage.credentialsId,
                                 verifyDeployments: false])
                         }
+
+                        sh "rm -rf ${env.WORKSPACE}/k8s"
 
                     } else {
                        echo 'Skipping deployment as there is no stage environment to deploy to'
@@ -176,15 +185,17 @@ pipeline {
                             input(id: "Deploy Gate", message: "Deploy to $nextStage?", ok: 'Deploy')
                             // commit release-info.yaml to next stage branch to trigger deployment
                             def branch = getBranchForStage(nextStage)
+                            // --allow-empty is to allow re-running the same build without failing
                             sh """
                                 git checkout $branch
                                 git checkout --theirs origin/${env.BRANCH_NAME} -- release-info.yaml
-                                git commit -m 'Merged release-info.yaml'
+                                git commit --allow-empty -m 'Jenkins Deployment Agent [${env.BRANCH_NAME} build #${BUILD_NUMBER}]: merged release-info.yaml'
                             """
 
-                            releaseTag = releaseInfo.release
+                            releaseTag = releaseInfo.vcs.release                            
                             if(branch == RELEASE_BRANCH_NAME && releaseTag) {
-                                sh "git tag -a $releaseTag -m 'Jenkins Deployment Agent: $releaseTag released'"
+                                echo "Tagging release $releaseTag"
+                                sh "git tag -f -a $releaseTag -m 'Jenkins Deployment Agent [${env.BRANCH_NAME} build #${BUILD_NUMBER}]: $releaseTag released'"
                             }
 
                             sshagent(credentials: [GITHUB_SSH_SECRET]) {
